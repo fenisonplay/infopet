@@ -2,14 +2,17 @@
     --primary: #4CAF50;
     --secondary: #2196F3;
     --error: #f44336;
+    --dark: #333;
+    --light: #f9f9f9;
 }
 
 body {
-    font-family: 'Arial', sans-serif;
-    line-height: 1.6;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     margin: 0;
     padding: 20px;
     background-color: #f5f5f5;
+    color: var(--dark);
+    line-height: 1.6;
 }
 
 .container {
@@ -17,23 +20,25 @@ body {
     margin: 0 auto;
     background: white;
     padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
 }
 
 h1 {
     color: var(--primary);
     text-align: center;
+    margin-bottom: 30px;
 }
 
 .form-group {
-    margin-bottom: 15px;
+    margin-bottom: 20px;
 }
 
 label {
     display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #555;
 }
 
 .required {
@@ -44,21 +49,29 @@ input[type="text"],
 input[type="tel"],
 select {
     width: 100%;
-    padding: 10px;
+    padding: 12px 15px;
     border: 1px solid #ddd;
-    border-radius: 5px;
+    border-radius: 8px;
     font-size: 16px;
+    transition: border 0.3s;
+}
+
+input:focus, select:focus {
+    border-color: var(--secondary);
+    outline: none;
 }
 
 button {
     background-color: var(--primary);
     color: white;
     border: none;
-    padding: 10px 15px;
-    border-radius: 5px;
+    padding: 12px 20px;
+    border-radius: 8px;
     cursor: pointer;
     font-size: 16px;
-    margin-top: 5px;
+    font-weight: 600;
+    width: 100%;
+    transition: background 0.3s;
 }
 
 button:hover {
@@ -69,14 +82,16 @@ button:hover {
     background-color: var(--secondary);
     display: block;
     margin: 20px auto;
+    max-width: 200px;
 }
 
 .contact-entry {
-    border: 1px dashed #ccc;
+    border: 1px dashed #bbdefb;
     padding: 15px;
     margin-bottom: 15px;
-    border-radius: 5px;
+    border-radius: 10px;
     position: relative;
+    background-color: #f0f8ff;
 }
 
 .remove-contact {
@@ -84,15 +99,67 @@ button:hover {
     position: absolute;
     right: 15px;
     bottom: 15px;
+    padding: 8px 12px;
+    font-size: 14px;
 }
 
-.nfc-section {
-    margin-top: 30px;
+/* Overlay NFC */
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.8);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.nfc-modal {
+    background: white;
+    padding: 30px;
+    border-radius: 15px;
     text-align: center;
+    width: 90%;
+    max-width: 400px;
 }
 
-#nfcStatus {
-    margin-top: 10px;
-    padding: 10px;
+.nfc-icon {
+    font-size: 3rem;
+    margin: 20px 0;
+    color: var(--secondary);
+}
+
+.countdown {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: var(--primary);
+    margin: 15px 0;
+}
+
+.progress-bar {
+    height: 10px;
+    background: #e0e0e0;
     border-radius: 5px;
+    margin: 20px 0;
+    overflow: hidden;
+}
+
+.progress {
+    height: 100%;
+    width: 0%;
+    background: var(--primary);
+    transition: width 1s linear;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .container {
+        padding: 15px;
+    }
+    h1 {
+        font-size: 24px;
+    }
 }
