@@ -1,16 +1,98 @@
-body {
-    font-family: Arial, sans-serif;
-    max-width: 500px;
-    margin: 0 auto;
-    padding: 20px;
+:root {
+    --primary: #4CAF50;
+    --secondary: #2196F3;
+    --error: #f44336;
 }
-input, button {
+
+body {
+    font-family: 'Arial', sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    padding: 20px;
+    background-color: #f5f5f5;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+h1 {
+    color: var(--primary);
+    text-align: center;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.required {
+    color: var(--error);
+}
+
+input[type="text"],
+input[type="tel"],
+select {
     width: 100%;
     padding: 10px;
-    margin: 5px 0;
-}
-#petInfo {
-    margin-top: 20px;
-    padding: 10px;
     border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+button {
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    margin-top: 5px;
+}
+
+button:hover {
+    opacity: 0.9;
+}
+
+#addContact {
+    background-color: var(--secondary);
+    display: block;
+    margin: 20px auto;
+}
+
+.contact-entry {
+    border: 1px dashed #ccc;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 5px;
+    position: relative;
+}
+
+.remove-contact {
+    background-color: var(--error);
+    position: absolute;
+    right: 15px;
+    bottom: 15px;
+}
+
+.nfc-section {
+    margin-top: 30px;
+    text-align: center;
+}
+
+#nfcStatus {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 5px;
 }
