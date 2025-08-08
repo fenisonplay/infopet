@@ -3,27 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>InfoPet NFC Lite</title>
+    <title>InfoPet - Crear Tarjeta NFC</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body {
-            font-family: Arial, sans-serif;
-            max-width: 600px;
+            font-family: 'Poppins', sans-serif;
+            max-width: 800px;
             margin: 0 auto;
             padding: 20px;
+            background-color: #f5f7fa;
+        }
+        .form-container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
         .form-group {
             margin-bottom: 15px;
         }
         label {
             display: block;
-            font-weight: bold;
             margin-bottom: 5px;
+            font-weight: bold;
         }
-        input, textarea {
+        input, textarea, select {
             width: 100%;
             padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
             box-sizing: border-box;
-            margin-bottom: 5px;
         }
         button {
             background-color: #4CAF50;
@@ -34,20 +44,21 @@
             cursor: pointer;
             font-size: 16px;
         }
-        button:disabled {
-            background-color: #cccccc;
-        }
-        #previewSection {
-            display: none;
+        #nfcPreview {
             margin-top: 20px;
-            border: 1px solid #ddd;
-            padding: 15px;
-            border-radius: 5px;
+            text-align: center;
+            display: none;
         }
-        #previewImage {
-            max-width: 100%;
-            display: block;
+        #petCard {
+            width: 300px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 15px;
+            background-color: white;
             margin: 0 auto;
+        }
+        .error-field {
+            border-color: #ff0000 !important;
         }
         .status-message {
             padding: 10px;
@@ -66,44 +77,69 @@
             background-color: #f8d7da;
             color: #721c24;
         }
-        .error-field {
-            border: 2px solid #ff0000 !important;
-        }
     </style>
 </head>
 <body>
-    <h1>InfoPet NFC Lite</h1>
-    
-    <form id="petForm">
-        <div class="form-group">
-            <label for="petName">Nombre mascota (max 8 letras)*</label>
-            <input type="text" id="petName" required maxlength="8">
-        </div>
+    <div class="form-container">
+        <h1>InfoPet - Crear Tarjeta NFC</h1>
+        <form id="petForm">
+            <div class="form-group">
+                <label for="petName">Nombre de la mascota *</label>
+                <input type="text" id="petName" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="petType">Tipo de mascota *</label>
+                <select id="petType" required>
+                    <option value="perro">Perro</option>
+                    <option value="gato">Gato</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="petBreed">Raza</label>
+                <input type="text" id="petBreed">
+            </div>
+            
+            <div class="form-group">
+                <label for="petAge">Edad (años)</label>
+                <input type="number" id="petAge" min="0" max="30">
+            </div>
+            
+            <div class="form-group">
+                <label for="ownerName">Nombre del dueño *</label>
+                <input type="text" id="ownerName" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="ownerPhone">Teléfono de contacto *</label>
+                <input type="tel" id="ownerPhone" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="medicalInfo">Información médica importante</label>
+                <textarea id="medicalInfo" rows="4"></textarea>
+            </div>
+            
+            <button type="button" id="generateBtn">Generar Tarjeta NFC</button>
+        </form>
         
-        <div class="form-group">
-            <label for="ownerName">Dueño (max 8 letras)*</label>
-            <input type="text" id="ownerName" required maxlength="8">
+        <div id="nfcPreview">
+            <h2>Previsualización de la Tarjeta</h2>
+            <div id="petCard">
+                <h3 id="previewName"></h3>
+                <p><strong>Raza:</strong> <span id="previewBreed"></span></p>
+                <p><strong>Edad:</strong> <span id="previewAge"></span> años</p>
+                <p><strong>Dueño:</strong> <span id="previewOwner"></span></p>
+                <p><strong>Contacto:</strong> <span id="previewPhone"></span></p>
+                <p><strong>Info médica:</strong> <span id="previewMedical"></span></p>
+            </div>
+            <button type="button" id="writeNfcBtn">Grabar en Chip NFC</button>
+            <div id="nfcStatus" class="status-message"></div>
         </div>
-        
-        <div class="form-group">
-            <label for="ownerPhone">Teléfono*</label>
-            <input type="tel" id="ownerPhone" required maxlength="12">
-        </div>
-        
-        <div class="form-group">
-            <label for="medicalInfo">Info médica (max 16 letras)</label>
-            <textarea id="medicalInfo" rows="2" maxlength="16"></textarea>
-        </div>
-        
-        <button type="button" id="generateBtn">Generar Tarjeta</button>
-    </form>
-    
-    <div id="previewSection">
-        <h3>Previsualización (96x64px)</h3>
-        <img id="previewImage" src="" alt="Previsualización">
-        <div id="nfcStatus" class="status-message"></div>
-        <button type="button" id="writeNfcBtn" disabled>Grabar en NFC</button>
     </div>
+
+    <canvas id="cardCanvas" style="display:none;"></canvas>
 
     <script src="app.js"></script>
 </body>
