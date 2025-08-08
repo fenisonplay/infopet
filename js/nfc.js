@@ -1,45 +1,51 @@
 async function saveToNfc() {
-    const petName = document.getElementById('petName').value;
-    const ownerPhone = document.getElementById('ownerPhone').value;
-
-    if (!petName || !ownerPhone) {
-        alert("¡Completa nombre y teléfono!");
-        return;
+    // Validar campos obligatorios
+    const requiredFields = ['petName', 'ownerName', 'ownerPhone', 'ownerAddress'];
+    for (const field of requiredFields) {
+        if (!document.getElementById(field).value) {
+            alert(`Por favor completa el campo obligatorio: ${field.replace('owner', '').replace('pet', '')}`);
+            return;
+        }
     }
+
+    // Recoger datos principales
+    const petData = {
+        name: document.getElementById('petName').value,
+        breed: document.getElementById('petBreed').value || 'No especificado',
+        owner: {
+            name: document.getElementById('ownerName').value,
+            phone: document.getElementById('ownerPhone').value,
+            phone2: document.getElementById('ownerPhone2').value || '',
+            address: document.getElementById('ownerAddress').value
+        },
+        contacts: []
+    };
+
+    // Recoger contactos adicionales
+    document.querySelectorAll('.contact-entry').forEach(entry => {
+        petData.contacts.push({
+            name: entry.querySelector('.contact-name').value,
+            phone: entry.querySelector('.contact-phone').value,
+            relation: entry.querySelector('.contact-relation').value
+        });
+    });
 
     try {
         if (!('NDEFReader' in window)) {
             throw new Error("Usa Chrome en Android con NFC activado.");
         }
 
-        // Mensaje de estado
-        const statusDiv = document.getElementById('nfcStatus');
-        statusDiv.textContent = "Acerca el tag NFC y NO LO MUEVAS...";
-        statusDiv.style.color = "blue";
-
-        // Intento de escritura con timeout
         const nfc = new NDEFReader();
-        await Promise.race([
-            nfc.write({
-                records: [{ 
-                    recordType: "text",
-                    data: `Nombre:${petName}|Teléfono:${ownerPhone}`
-                }]
-            }),
-            new Promise((_, reject) => 
-                setTimeout(() => reject(new Error("Tiempo agotado. Mantén el tag cerca por 3 segundos.")), 3000)
-            )
-        ]);
+        await nfc.write({
+            records: [{
+                recordType: "text",
+                data: JSON.stringify(petData) // Guardamos todos los datos como JSON
+            }]
+        });
 
-        statusDiv.textContent = "¡Datos guardados! ✔️";
-        statusDiv.style.color = "green";
-
+        alert("¡Datos guardados en el NFC correctamente!");
     } catch (error) {
-        const errorMsg = `Error: ${error.message}. Asegúrate de:
-            - NFC activado
-            - Tag cerca y quieto
-            - Chrome actualizado`;
-        alert(errorMsg);
+        alert(`Error: ${error.message}`);
         console.error(error);
     }
 }
