@@ -1,261 +1,239 @@
-// Objeto para almacenar los datos de la mascota
-let petData = {};
+// =============================================
+// CONFIGURACIÓN INICIAL
+// =============================================
+const NFC_CONFIG = {
+  MAX_RETRIES: 3,                // Intentos máximos
+  TIMEOUT: 25000,                // 25 segundos timeout
+  MAX_DATA_SIZE: 4000            // 4KB máximo
+};
 
-// Inicialización cuando el DOM esté listo
+let appState = {
+  isWriting: false,
+  retryCount: 0,
+  lastError: null
+};
+
+let petData = {}; // Almacena datos de la mascota
+
+// =============================================
+// INICIALIZACIÓN AL CARGAR LA PÁGINA
+// =============================================
 document.addEventListener('DOMContentLoaded', function() {
-    // 1. Generar tarjeta NFC
-    document.getElementById('generateBtn').addEventListener('click', async function() {
-        // Validar campos requeridos
-        if (!validateForm()) return;
+  // Verificar compatibilidad NFC
+  if (!isNFCSupported()) {
+    showStatus('⚠️ NFC no disponible en este dispositivo', 'warning');
+    document.getElementById('writeNfcBtn').disabled = true;
+    return;
+  }
 
-        // Generar los datos
-        await generatePetCard();
-    });
-
-    // 2. Grabar en NFC
-    document.getElementById('writeNfcBtn').addEventListener('click', writeNfcTag);
-
-    // 3. Ayuda NFC
-    document.getElementById('nfcHelpBtn')?.addEventListener('click', showNfcHelp);
+  // Eventos
+  document.getElementById('generateBtn').addEventListener('click', generatePetCard);
+  document.getElementById('writeNfcBtn').addEventListener('click', handleWriteNfc);
+  document.getElementById('nfcHelpBtn').addEventListener('click', showNfcHelp);
 });
 
-// Función para mostrar ayuda NFC
-function showNfcHelp() {
-    alert(`🆘 Ayuda para grabar en NFC:\n\n1. Usa tags NFC NTAG213 o NTAG216\n2. Mantén el tag estable durante la escritura\n3. Acerca el tag a la parte superior del teléfono\n4. Asegúrate de tener NFC activado\n5. Prueba en un ambiente sin interferencias`);
-}
+// =============================================
+// FUNCIONES PRINCIPALES
+// =============================================
 
-// Función para validar el formulario
-function validateForm() {
-    const requiredFields = ['petName', 'petType', 'ownerName', 'ownerPhone'];
-    let isValid = true;
-    
-    requiredFields.forEach(fieldId => {
-        const field = document.getElementById(fieldId);
-        if (!field.value.trim()) {
-            field.classList.add('error-field');
-            isValid = false;
-        } else {
-            field.classList.remove('error-field');
-        }
-    });
-
-    if (!isValid) {
-        showStatus('Por favor complete todos los campos requeridos (*)', 'error');
-        return false;
-    }
-    return true;
-}
-
-// Generar la tarjeta visual y los datos (sin imágenes)
+/**
+ * Genera la tarjeta visual y prepara los datos
+ */
 async function generatePetCard() {
-    // Recoger datos del formulario
-    petData = {
-        name: document.getElementById('petName').value.trim(),
-        type: document.getElementById('petType').value,
-        breed: document.getElementById('petBreed').value.trim(),
-        age: document.getElementById('petAge').value,
-        owner: document.getElementById('ownerName').value.trim(),
-        phone: document.getElementById('ownerPhone').value.trim(),
-        medical: document.getElementById('medicalInfo').value.trim(),
-        timestamp: new Date().toISOString()
-    };
+  if (!validateForm()) return;
 
-    // Generar imagen de la tarjeta (sin foto de mascota)
-    petData.cardImage = await generateCardImage();
-    
-    // Mostrar previsualización
-    updatePreview();
-    
-    // Mostrar sección de previsualización
-    document.getElementById('previewSection').style.display = 'block';
-    window.scrollTo({
-        top: document.getElementById('previewSection').offsetTop - 20,
-        behavior: 'smooth'
-    });
+  // Recoger datos del formulario
+  petData = {
+    name: sanitizeInput(document.getElementById('petName').value),
+    owner: sanitizeInput(document.getElementById('ownerName').value),
+    phone: sanitizeInput(document.getElementById('ownerPhone').value),
+    medical: sanitizeInput(document.getElementById('medicalInfo').value),
+    age: document.getElementById('petAge').value || '?',
+    breed: document.getElementById('petBreed').value || 'Sin raza'
+  };
+
+  // Mostrar previsualización
+  updatePreview();
+  document.getElementById('previewSection').style.display = 'block';
+  showStatus('📝 Tarjeta generada. Lista para grabar NFC', 'info');
 }
 
-// Actualizar la vista previa
-function updatePreview() {
-    document.getElementById('previewName').textContent = petData.name;
-    document.getElementById('previewBreedAge').textContent = 
-        `${petData.breed || 'Sin raza'} • ${petData.age || '?'} años`;
-    document.getElementById('previewOwner').textContent = petData.owner;
-    document.getElementById('previewPhone').textContent = petData.phone;
-    document.getElementById('previewMedical').textContent = petData.medical || 'Ninguna';
-    document.getElementById('previewImage').src = petData.cardImage;
+/**
+ * Maneja el proceso completo de escritura NFC
+ */
+async function handleWriteNfc() {
+  if (appState.isWriting) return;
+  if (!validatePetData()) {
+    showStatus('❌ Completa los campos requeridos', 'error');
+    return;
+  }
+
+  // Configurar estado
+  appState.isWriting = true;
+  appState.retryCount = 0;
+  appState.lastError = null;
+  disableUI(true);
+
+  try {
+    await writeWithRetry();
+  } catch (error) {
+    handleNfcError(error);
+  } finally {
+    disableUI(false);
+    appState.isWriting = false;
+  }
 }
 
-// Generar imagen de la tarjeta (versión sin foto de mascota)
-async function generateCardImage() {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    
-    // Tamaño de la tarjeta (300x400px)
-    canvas.width = 300;
-    canvas.height = 400;
-    
-    // Fondo blanco
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Encabezado azul
-    ctx.fillStyle = '#4e73df';
-    ctx.fillRect(0, 0, canvas.width, 80);
-    
-    // Logo (icono de huella)
-    ctx.font = '30px FontAwesome';
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText('', 20, 50);
-    
-    // Título
-    ctx.font = 'bold 20px Poppins';
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText('InfoPet', 60, 50);
-    
-    // Icono de mascota predeterminado (en lugar de foto)
-    ctx.font = '50px FontAwesome';
-    ctx.fillStyle = '#dddddd';
-    ctx.textAlign = 'center';
-    ctx.fillText('', 150, 180);
-    
-    // Nombre de la mascota
-    ctx.font = 'bold 18px Poppins';
-    ctx.fillStyle = '#333333';
-    ctx.textAlign = 'center';
-    ctx.fillText(petData.name, 150, 230);
-    
-    // Raza y edad
-    ctx.font = '14px Poppins';
-    ctx.fillStyle = '#666666';
-    ctx.fillText(`${petData.breed || 'Sin raza'} • ${petData.age || '?'} años`, 150, 260);
-    
-    // Información del dueño
-    ctx.font = '14px Poppins';
-    ctx.fillStyle = '#333333';
-    ctx.textAlign = 'left';
-    ctx.fillText(`Dueño: ${petData.owner}`, 30, 300);
-    ctx.fillText(`Contacto: ${petData.phone}`, 30, 320);
-    ctx.fillText(`Info Médica: ${petData.medical || 'Ninguna'}`, 30, 340);
-    
-    // Convertir canvas a JPG
-    return canvas.toDataURL('image/jpeg', 0.8);
-}
+// =============================================
+// FUNCIONES NFC (CORE)
+// =============================================
 
-// Función principal para grabar en NFC
-async function writeNfcTag() {
-    if (!petData || Object.keys(petData).length === 0) {
-        showStatus('Primero debes generar los datos de la mascota', 'error');
-        return;
-    }
+/**
+ * Intenta escribir con reintentos automáticos
+ */
+async function writeWithRetry() {
+  while (appState.retryCount < NFC_CONFIG.MAX_RETRIES) {
+    appState.retryCount++;
+    showStatus(`🔄 Intento ${appState.retryCount} de ${NFC_CONFIG.MAX_RETRIES}`, 'info');
 
     try {
-        showStatus('Preparando para grabar...', 'info');
-        
-        // 1. Verificar soporte NFC
-        if (!('NDEFReader' in window)) {
-            throw new Error('NFC no soportado. Usa Chrome para Android (versión 89+).');
-        }
-
-        // 2. Preparar datos para NFC
-        showStatus('Preparando datos para NFC...', 'info');
-        
-        // Generar imagen de tarjeta
-        const imageDataUrl = await generateCardImage();
-        const imageBlob = await fetch(imageDataUrl).then(r => r.blob());
-        const imageArrayBuffer = await new Response(imageBlob).arrayBuffer();
-        
-        // Datos JSON minimizados
-        const minimalData = {
-            n: petData.name,    // Nombre
-            o: petData.owner,   // Dueño
-            p: petData.phone,   // Teléfono
-            m: petData.medical  // Info médica
-        };
-        
-        const encoder = new TextEncoder();
-        const jsonData = encoder.encode(JSON.stringify(minimalData));
-
-        // 3. Intentar escritura con timeout
-        showStatus('Acerca el tag NFC al dispositivo...', 'info');
-        await writeWithTimeout(imageArrayBuffer, jsonData);
-        
-        showStatus('✅ ¡Tarjeta grabada con éxito!', 'success');
+      await attemptNfcWrite();
+      showStatus('✅ ¡Grabación exitosa!', 'success');
+      return;
     } catch (error) {
-        handleNfcError(error);
+      appState.lastError = error;
+      console.error(`Intento ${appState.retryCount} fallido:`, error);
+      
+      if (appState.retryCount < NFC_CONFIG.MAX_RETRIES) {
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Espera 1s
+      }
     }
+  }
+  throw appState.lastError;
 }
 
-// Escritura con timeout
-async function writeWithTimeout(imageData, jsonData) {
+/**
+ * Intento único de escritura NFC
+ */
+async function attemptNfcWrite() {
+  const abortController = new AbortController();
+  const timeoutId = setTimeout(() => abortController.abort(), NFC_CONFIG.TIMEOUT);
+
+  try {
     const ndef = new NDEFReader();
-    const abortController = new AbortController();
-    
-    // Timeout de 20 segundos
-    const timeoutId = setTimeout(() => {
-        abortController.abort();
-        throw new Error('Tiempo agotado. Mantén el tag cerca del dispositivo.');
-    }, 20000);
+    const records = [
+      createTextRecord(),  // Datos en formato texto simple
+      createUrlRecord()   // URL de respaldo
+    ];
 
-    try {
-        await ndef.write({
-            records: [
-                { 
-                    recordType: "mime",
-                    mediaType: "image/jpeg",
-                    data: imageData
-                },
-                {
-                    recordType: "mime",
-                    mediaType: "application/json",
-                    data: jsonData
-                }
-            ]
-        }, { signal: abortController.signal });
-    } finally {
-        clearTimeout(timeoutId);
-    }
+    showStatus('📱 Acerca el tag NFC ahora...', 'info');
+    await ndef.write({ records }, { signal: abortController.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
-// Manejo de errores detallado
+/**
+ * Crea un registro de texto optimizado
+ */
+function createTextRecord() {
+  const textData = `INFOPET|${petData.name}|${petData.owner}|${petData.phone}|${petData.medical || 'Sin info'}`;
+  return {
+    recordType: "text",
+    data: textData,
+    lang: "es"
+  };
+}
+
+/**
+ * Crea un registro URL de respaldo
+ */
+function createUrlRecord() {
+  return {
+    recordType: "url",
+    data: "https://infopet.example.com/nfc"
+  };
+}
+
+// =============================================
+// FUNCIONES AUXILIARES
+// =============================================
+
+function isNFCSupported() {
+  return 'NDEFReader' in window && 
+         navigator.userAgent.match(/Android.*Chrome\//i);
+}
+
+function validateForm() {
+  const requiredFields = ['petName', 'ownerName', 'ownerPhone'];
+  let isValid = true;
+
+  requiredFields.forEach(fieldId => {
+    const field = document.getElementById(fieldId);
+    if (!field.value.trim()) {
+      field.classList.add('error-field');
+      isValid = false;
+    } else {
+      field.classList.remove('error-field');
+    }
+  });
+
+  return isValid;
+}
+
+function validatePetData() {
+  return petData?.name && petData?.owner && petData?.phone;
+}
+
+function sanitizeInput(text) {
+  return text.trim().substring(0, 50); // Limita longitud
+}
+
+function updatePreview() {
+  document.getElementById('previewName').textContent = petData.name;
+  document.getElementById('previewBreedAge').textContent = `${petData.breed} • ${petData.age} años`;
+  document.getElementById('previewOwner').textContent = petData.owner;
+  document.getElementById('previewPhone').textContent = petData.phone;
+  document.getElementById('previewMedical').textContent = petData.medical || 'Ninguna';
+}
+
+function disableUI(disabled) {
+  document.getElementById('writeNfcBtn').disabled = disabled;
+  document.getElementById('generateBtn').disabled = disabled;
+}
+
+function showNfcHelp() {
+  alert(`🆘 AYUDA NFC:\n\n1. Usa tags NTAG213/216\n2. Mantén el tag estable\n3. Acércalo a la parte superior del teléfono\n4. Sin objetos metálicos cerca\n5. Intenta en otro dispositivo si persiste`);
+}
+
+// =============================================
+// MANEJO DE ERRORES (MEJORADO)
+// =============================================
+
 function handleNfcError(error) {
-    console.error('Error NFC:', error);
-    
-    let userMessage = 'Error desconocido al grabar NFC';
-    
-    if (error.message.includes('IO error') || error.message.includes('null')) {
-        userMessage = 'Error de comunicación. Prueba:\n1. Con otro tag NFC\n2. Reiniciar el teléfono\n3. Menos interferencias';
-    } else if (error.message.includes('NotAllowedError')) {
-        userMessage = 'Permiso denegado. Asegúrate de permitir el uso de NFC en tu navegador.';
-    } else if (error.message.includes('NotSupportedError')) {
-        userMessage = 'Tu dispositivo o navegador no soporta Web NFC. Prueba con Chrome para Android.';
-    } else if (error.message.includes('Tiempo agotado')) {
-        userMessage = error.message;
-    } else if (error.message.includes('demasiado grande') || error.message.includes('overflows')) {
-        userMessage = 'Los datos son demasiado grandes. Intenta con menos información.';
-    }
+  let message = 'Error desconocido';
+  let details = '';
 
-    showStatus(`❌ ${userMessage}`, 'error');
+  if (error.message.includes('IO error') || error.message.includes('null')) {
+    message = 'Error de comunicación NFC';
+    details = '1. Prueba otro tag\n2. Reinicia el teléfono\n3. Menos interferencias';
+  } else if (error.name === 'AbortError') {
+    message = 'Tiempo agotado (25s)';
+    details = 'Mantén el tag cerca más tiempo';
+  } else if (error.message.includes('NotAllowedError')) {
+    message = 'Permiso denegado';
+    details = 'Acepta los permisos NFC en Chrome';
+  }
+
+  showStatus(`❌ ${message}\n${details}`, 'error');
 }
 
-// Mostrar mensajes de estado
 function showStatus(message, type) {
-    const statusElement = document.getElementById('nfcStatus');
-    const icons = {
-        info: '⏳',
-        success: '✅',
-        error: '❌'
-    };
-    
-    statusElement.innerHTML = `${icons[type] || ''} ${message}`;
-    statusElement.className = `status-message ${type}`;
-    
-    // Auto-ocultar mensajes de éxito después de 5 segundos
-    if (type === 'success') {
-        setTimeout(() => {
-            if (statusElement.textContent.includes(message)) {
-                statusElement.textContent = '';
-                statusElement.className = 'status-message';
-            }
-        }, 5000);
-    }
+  const statusElement = document.getElementById('nfcStatus');
+  statusElement.innerHTML = message.replace(/\n/g, '<br>');
+  statusElement.className = `status-${type}`;
+
+  if (type === 'success') {
+    setTimeout(() => statusElement.textContent = '', 5000);
+  }
 }
