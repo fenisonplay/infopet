@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <link rel="stylesheet" href="css/style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Información de Mascota Perdida</title>
+    <style>
+        :root {
+            --primary: #FF6B6B;
+            --secondary: #4ECDC4;
+            --light: #F7FFF7;
+            --dark: #292F36;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--light);
+            color: var(--dark);
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .pet-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+        
+        .pet-header {
+            background: var(--primary);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .pet-header h1 {
+            margin: 0;
+            font-size: 28px;
+        }
+        
+        .pet-photo {
+            width: 100%;
+            max-height: 300px;
+            object-fit: cover;
+            border-bottom: 5px solid var(--secondary);
+        }
+        
+        .pet-info {
+            padding: 20px;
+        }
+        
+        .info-section {
+            margin-bottom: 20px;
+        }
+        
+        .info-section h3 {
+            color: var(--primary);
+            margin-bottom: 8px;
+            border-bottom: 2px solid var(--secondary);
+            padding-bottom: 5px;
+        }
+        
+        .contact-btn {
+            display: block;
+            background: var(--secondary);
+            color: white;
+            text-align: center;
+            padding: 12px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            margin-top: 20px;
+            transition: all 0.3s;
+        }
+        
+        .contact-btn:hover {
+            background: #3aa89b;
+            transform: translateY(-2px);
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: var(--primary);
+            font-size: 18px;
+        }
+        
+        .reward-badge {
+            background: gold;
+            color: #8B4513;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-weight: bold;
+            display: inline-block;
+            margin-top: 10px;
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .pet-header h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="pet-card">
+            <div class="pet-header">
+                <h1>¡He encontrado una mascota!</h1>
+            </div>
+            
+            <div id="petPhotoContainer">
+                <img id="petPhoto" class="pet-photo" src="https://cdn-icons-png.flaticon.com/512/194/194279.png" alt="Foto de la mascota">
+            </div>
+            
+            <div class="pet-info">
+                <div id="loading" class="loading">
+                    Escaneando información del NFC...
+                </div>
+                
+                <div id="petData" style="display: none;">
+                    <div class="info-section">
+                        <h3>Información básica</h3>
+                        <p><strong>Nombre:</strong> <span id="petName">-</span></p>
+                        <p><strong>Dueño:</strong> <span id="ownerName">-</span></p>
+                    </div>
+                    
+                    <div class="info-section">
+                        <h3>Contacto</h3>
+                        <p><strong>Teléfono:</strong> <span id="phone">-</span></p>
+                        <p><strong>Dirección:</strong> <span id="address">No especificada</span></p>
+                    </div>
+                    
+                    <div class="info-section">
+                        <h3>Salud</h3>
+                        <p id="medicalInfo">No hay información médica registrada.</p>
+                    </div>
+                    
+                    <div id="rewardSection" style="display: none;">
+                        <h3>Recompensa</h3>
+                        <p class="reward-badge" id="rewardAmount"></p>
+                    </div>
+                    
+                    <a id="callBtn" class="contact-btn" href="#">Llamar al dueño</a>
+                </div>
+                
+                <div id="errorMessage" style="display: none; color: var(--primary); text-align: center;">
+                    No se pudieron leer los datos del NFC. Por favor, intenta nuevamente.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const loadingElement = document.getElementById('loading');
+            const petDataElement = document.getElementById('petData');
+            const errorElement = document.getElementById('errorMessage');
+            
+            try {
+                if ('NDEFReader' in window) {
+                    const nfcReader = new NDEFReader();
+                    await nfcReader.scan();
+                    
+                    nfcReader.onreading = event => {
+                        const decoder = new TextDecoder();
+                        for (const record of event.message.records) {
+                            try {
+                                const data = JSON.parse(decoder.decode(record.data));
+                                displayPetData(data);
+                            } catch (e) {
+                                showError();
+                            }
+                        }
+                    };
+                    
+                    // Timeout si no se detecta NFC en 15 segundos
+                    setTimeout(() => {
+                        if (petDataElement.style.display === 'none' && errorElement.style.display === 'none') {
+                            showError();
+                        }
+                    }, 15000);
+                    
+                } else {
+                    showError("NFC no está disponible en este dispositivo");
+                }
+            } catch (error) {
+                showError(error.message);
+            }
+            
+            function displayPetData(data) {
+                loadingElement.style.display = 'none';
+                petDataElement.style.display = 'block';
+                
+                // Mostrar datos básicos
+                if (data.name) document.getElementById('petName').textContent = data.name;
+                if (data.owner) document.getElementById('ownerName').textContent = data.owner;
+                if (data.phone) {
+                    document.getElementById('phone').textContent = data.phone;
+                    document.getElementById('callBtn').href = `tel:${data.phone}`;
+                }
+                if (data.address) document.getElementById('address').textContent = data.address;
+                
+                // Mostrar foto si está disponible
+                if (data.photo && data.photo !== "https://cdn-icons-png.flaticon.com/512/194/194279.png") {
+                    document.getElementById('petPhoto').src = data.photo;
+                }
+                
+                // Mostrar información médica
+                if (data.medicalInfo) {
+                    document.getElementById('medicalInfo').textContent = data.medicalInfo;
+                }
+                
+                // Mostrar recompensa si existe
+                if (data.reward) {
+                    document.getElementById('rewardSection').style.display = 'block';
+                    document.getElementById('rewardAmount').textContent = data.reward;
+                }
+            }
+            
+            function showError(message) {
+                loadingElement.style.display = 'none';
+                petDataElement.style.display = 'none';
+                errorElement.style.display = 'block';
+                
+                if (message) {
+                    errorElement.textContent = message;
+                }
+                
+                // Opcional: Mostrar datos de ejemplo para pruebas
+                if (window.location.search.includes('demo')) {
+                    displayPetData({
+                        name: "Max",
+                        owner: "Juan Pérez",
+                        phone: "+34 612 345 678",
+                        address: "Calle Principal 123, Madrid",
+                        medicalInfo: "Alérgico a la penicilina. Lleva microchip.",
+                        reward: "100€ de recompensa",
+                        photo: "https://images.unsplash.com/photo-1586671267731-da2cf3ceeb80?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80"
+                    });
+                }
+            }
+        });
+    </script>
+</body>
+</html>
