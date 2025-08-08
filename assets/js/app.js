@@ -3,48 +3,19 @@ let petData = {};
 
 // Inicialización cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', function() {
-    // 1. Manejo de la selección de imagen
-    document.getElementById('petPhoto').addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        const fileNameElement = document.getElementById('fileName');
-        const imagePreview = document.getElementById('imagePreview');
-        
-        if (file) {
-            fileNameElement.textContent = file.name;
-            
-            // Mostrar previsualización
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                imagePreview.innerHTML = `<img src="${event.target.result}" alt="Preview">`;
-            };
-            reader.readAsDataURL(file);
-        } else {
-            fileNameElement.textContent = 'No se ha seleccionado ninguna imagen';
-            imagePreview.innerHTML = '';
-        }
-    });
-
-    // 2. Generar tarjeta NFC
+    // 1. Generar tarjeta NFC
     document.getElementById('generateBtn').addEventListener('click', async function() {
         // Validar campos requeridos
         if (!validateForm()) return;
 
-        // Obtener la imagen en base64 si existe
-        const photoInput = document.getElementById('petPhoto');
-        let imageBase64 = '';
-        
-        if (photoInput.files[0]) {
-            imageBase64 = await readFileAsDataURL(photoInput.files[0]);
-        }
-
-        // Generar los datos y la tarjeta visual
-        await generatePetCard(imageBase64);
+        // Generar los datos
+        await generatePetCard();
     });
 
-    // 3. Grabar en NFC
+    // 2. Grabar en NFC
     document.getElementById('writeNfcBtn').addEventListener('click', writeNfcTag);
 
-    // 4. Ayuda NFC
+    // 3. Ayuda NFC
     document.getElementById('nfcHelpBtn')?.addEventListener('click', showNfcHelp);
 });
 
@@ -75,17 +46,8 @@ function validateForm() {
     return true;
 }
 
-// Leer archivo como Data URL
-function readFileAsDataURL(file) {
-    return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target.result);
-        reader.readAsDataURL(file);
-    });
-}
-
-// Generar la tarjeta visual y los datos
-async function generatePetCard(imageBase64) {
+// Generar la tarjeta visual y los datos (sin imágenes)
+async function generatePetCard() {
     // Recoger datos del formulario
     petData = {
         name: document.getElementById('petName').value.trim(),
@@ -95,12 +57,11 @@ async function generatePetCard(imageBase64) {
         owner: document.getElementById('ownerName').value.trim(),
         phone: document.getElementById('ownerPhone').value.trim(),
         medical: document.getElementById('medicalInfo').value.trim(),
-        image: imageBase64,
         timestamp: new Date().toISOString()
     };
 
-    // Generar imagen de la tarjeta (calidad inicial 0.8)
-    petData.cardImage = await generateCardImage(0.8);
+    // Generar imagen de la tarjeta (sin foto de mascota)
+    petData.cardImage = await generateCardImage();
     
     // Mostrar previsualización
     updatePreview();
@@ -124,8 +85,8 @@ function updatePreview() {
     document.getElementById('previewImage').src = petData.cardImage;
 }
 
-// Generar imagen de la tarjeta (JPG) con calidad ajustable
-async function generateCardImage(quality = 0.7) {
+// Generar imagen de la tarjeta (versión sin foto de mascota)
+async function generateCardImage() {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     
@@ -151,22 +112,11 @@ async function generateCardImage(quality = 0.7) {
     ctx.fillStyle = '#ffffff';
     ctx.fillText('InfoPet', 60, 50);
     
-    // Foto de la mascota (si existe)
-    if (petData.image) {
-        const img = new Image();
-        await new Promise((resolve) => {
-            img.onload = resolve;
-            img.src = petData.image;
-        });
-        
-        // Dibujar imagen redondeada
-        ctx.beginPath();
-        ctx.arc(150, 160, 50, 0, Math.PI * 2, true);
-        ctx.closePath();
-        ctx.clip();
-        ctx.drawImage(img, 100, 110, 100, 100);
-        ctx.restore();
-    }
+    // Icono de mascota predeterminado (en lugar de foto)
+    ctx.font = '50px FontAwesome';
+    ctx.fillStyle = '#dddddd';
+    ctx.textAlign = 'center';
+    ctx.fillText('', 150, 180);
     
     // Nombre de la mascota
     ctx.font = 'bold 18px Poppins';
@@ -187,8 +137,8 @@ async function generateCardImage(quality = 0.7) {
     ctx.fillText(`Contacto: ${petData.phone}`, 30, 320);
     ctx.fillText(`Info Médica: ${petData.medical || 'Ninguna'}`, 30, 340);
     
-    // Convertir canvas a JPG con calidad especificada
-    return canvas.toDataURL('image/jpeg', quality);
+    // Convertir canvas a JPG
+    return canvas.toDataURL('image/jpeg', 0.8);
 }
 
 // Función principal para grabar en NFC
@@ -206,9 +156,24 @@ async function writeNfcTag() {
             throw new Error('NFC no soportado. Usa Chrome para Android (versión 89+).');
         }
 
-        // 2. Optimizar datos para NFC
-        showStatus('Optimizando datos para NFC...', 'info');
-        const { imageArrayBuffer, jsonData } = await prepareNfcData();
+        // 2. Preparar datos para NFC
+        showStatus('Preparando datos para NFC...', 'info');
+        
+        // Generar imagen de tarjeta
+        const imageDataUrl = await generateCardImage();
+        const imageBlob = await fetch(imageDataUrl).then(r => r.blob());
+        const imageArrayBuffer = await new Response(imageBlob).arrayBuffer();
+        
+        // Datos JSON minimizados
+        const minimalData = {
+            n: petData.name,    // Nombre
+            o: petData.owner,   // Dueño
+            p: petData.phone,   // Teléfono
+            m: petData.medical  // Info médica
+        };
+        
+        const encoder = new TextEncoder();
+        const jsonData = encoder.encode(JSON.stringify(minimalData));
 
         // 3. Intentar escritura con timeout
         showStatus('Acerca el tag NFC al dispositivo...', 'info');
@@ -218,52 +183,6 @@ async function writeNfcTag() {
     } catch (error) {
         handleNfcError(error);
     }
-}
-
-// Preparar datos optimizados para NFC
-async function prepareNfcData() {
-    let quality = 0.7; // Calidad inicial
-    let imageArrayBuffer;
-    let attempts = 0;
-    const maxAttempts = 3;
-    
-    // Intentar reducir tamaño si es necesario
-    while (attempts < maxAttempts) {
-        try {
-            // Generar imagen con calidad actual
-            const imageDataUrl = await generateCardImage(quality);
-            const imageBlob = await fetch(imageDataUrl).then(r => r.blob());
-            imageArrayBuffer = await new Response(imageBlob).arrayBuffer();
-            
-            // Verificar tamaño (max 4KB para seguridad)
-            if (imageArrayBuffer.byteLength > 4000) {
-                throw new Error(`Imagen demasiado grande (${imageArrayBuffer.byteLength} bytes)`);
-            }
-            
-            break; // Tamaño aceptable
-        } catch (error) {
-            attempts++;
-            quality -= 0.15; // Reducir calidad
-            console.warn(`Intento ${attempts}: Reduciendo calidad a ${quality.toFixed(2)}`);
-            
-            if (attempts >= maxAttempts) {
-                throw new Error('No se pudo optimizar la imagen para el tag NFC');
-            }
-        }
-    }
-
-    // Datos JSON minimizados
-    const minimalData = {
-        n: petData.name,       // Nombre corto
-        o: petData.owner,      // Owner
-        p: petData.phone,      // Phone
-        m: petData.medical     // Medical
-    };
-    
-    const encoder = new TextEncoder();
-    const jsonData = encoder.encode(JSON.stringify(minimalData));
-
-    return { imageArrayBuffer, jsonData };
 }
 
 // Escritura con timeout
@@ -312,9 +231,7 @@ function handleNfcError(error) {
     } else if (error.message.includes('Tiempo agotado')) {
         userMessage = error.message;
     } else if (error.message.includes('demasiado grande') || error.message.includes('overflows')) {
-        userMessage = 'Datos demasiado grandes. Intenta con una imagen más pequeña.';
-    } else if (error.message.includes('No se pudo optimizar')) {
-        userMessage = 'La imagen es muy grande. Reduce la calidad o el tamaño.';
+        userMessage = 'Los datos son demasiado grandes. Intenta con menos información.';
     }
 
     showStatus(`❌ ${userMessage}`, 'error');
