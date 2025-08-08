@@ -12,44 +12,56 @@ let isWriting = false;
 
 // Inicialización
 document.addEventListener('DOMContentLoaded', function() {
+  // Verificar compatibilidad NFC
   if (!('NDEFReader' in window)) {
-    showStatus('⚠️ NFC no soportado', 'warning');
+    showStatus('⚠️ NFC no soportado en este navegador', 'warning');
     document.getElementById('writeNfcBtn').disabled = true;
-    return;
   }
 
+  // Eventos
   document.getElementById('generateBtn').addEventListener('click', generatePetCard);
   document.getElementById('writeNfcBtn').addEventListener('click', writeImageToNfc);
 });
 
-// Genera tarjeta ultra ligera
+// Función para generar la tarjeta
 async function generatePetCard() {
-  if (!validateForm()) return;
+  // Validar formulario
+  if (!validateForm()) {
+    showStatus('❌ Completa los campos requeridos', 'error');
+    return;
+  }
 
+  // Recoger datos del formulario
   petData = {
-    name: truncateText(document.getElementById('petName').value, 8),
-    owner: truncateText(document.getElementById('ownerName').value, 8),
-    phone: document.getElementById('ownerPhone').value.substring(0, 12),
-    medical: truncateText(document.getElementById('medicalInfo').value, 16)
+    name: document.getElementById('petName').value.trim().substring(0, 8),
+    owner: document.getElementById('ownerName').value.trim().substring(0, 8),
+    phone: document.getElementById('ownerPhone').value.trim().substring(0, 12),
+    medical: document.getElementById('medicalInfo').value.trim().substring(0, 16)
   };
 
   // Generar imagen optimizada
   let imageData;
   let quality = IMAGE_CONFIG.quality;
+  let attempts = 0;
   
   do {
+    attempts++;
     petData.cardImage = await generateTinyCard(quality);
     imageData = await getImageBinary(petData.cardImage);
     quality -= 0.1;
+    
+    if (attempts > 3) break; // Máximo 3 intentos
   } while (imageData.byteLength > IMAGE_CONFIG.maxSize && quality > 0.2);
 
   if (imageData.byteLength > IMAGE_CONFIG.maxSize) {
-    showStatus('❌ No se puede comprimir más', 'error');
+    showStatus('❌ No se puede comprimir más. Reduce el texto.', 'error');
     return;
   }
 
+  // Mostrar resultados
   updatePreview();
   document.getElementById('previewSection').style.display = 'block';
+  document.getElementById('writeNfcBtn').disabled = false;
   showStatus(`🖼️ Imagen lista (${imageData.byteLength} bytes)`, 'success');
 }
 
@@ -61,16 +73,20 @@ async function generateTinyCard(quality) {
   const ctx = canvas.getContext('2d');
 
   // Fondo blanco
-  ctx.fillStyle = '#fff';
+  ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   // Texto minimalista
-  ctx.fillStyle = '#000';
-  ctx.font = '8px Arial';
+  ctx.fillStyle = '#000000';
+  ctx.font = 'bold 8px Arial';
+  
+  // Encabezado
   ctx.fillText('INFOPET', 2, 8);
-  ctx.fillText(`M:${petData.name}`, 2, 20);
-  ctx.fillText(`D:${petData.owner}`, 2, 32);
-  ctx.fillText(`T:${petData.phone}`, 2, 44);
+  
+  // Datos
+  ctx.fillText(`M:${petData.name || '-'}`, 2, 20);
+  ctx.fillText(`D:${petData.owner || '-'}`, 2, 32);
+  ctx.fillText(`T:${petData.phone || '-'}`, 2, 44);
   ctx.fillText(`S:${petData.medical || '-'}`, 2, 56);
 
   return canvas.toDataURL('image/jpeg', quality);
@@ -90,7 +106,8 @@ async function writeImageToNfc() {
       throw new Error(`Imagen muy grande (${imageData.byteLength} bytes)`);
     }
 
-    showStatus('📱 Acerca tag NFC...', 'info');
+    showStatus('📱 Acerca el tag NFC al dispositivo...', 'info');
+    
     const ndef = new NDEFReader();
     await ndef.write({
       records: [{
@@ -100,7 +117,7 @@ async function writeImageToNfc() {
       }]
     });
     
-    showStatus('✅ Grabado!', 'success');
+    showStatus('✅ ¡Imagen grabada con éxito!', 'success');
   } catch (error) {
     handleNfcError(error);
   } finally {
@@ -109,32 +126,67 @@ async function writeImageToNfc() {
   }
 }
 
-// ===== Funciones Auxiliares =====
+// ===== FUNCIONES AUXILIARES =====
+
+// Valida el formulario
+function validateForm() {
+  const requiredFields = ['petName', 'ownerName', 'ownerPhone'];
+  let isValid = true;
+
+  requiredFields.forEach(fieldId => {
+    const field = document.getElementById(fieldId);
+    if (!field.value.trim()) {
+      field.classList.add('error-field');
+      isValid = false;
+    } else {
+      field.classList.remove('error-field');
+    }
+  });
+
+  return isValid;
+}
+
+// Actualiza la previsualización
+function updatePreview() {
+  const previewImg = document.getElementById('previewImage');
+  previewImg.src = petData.cardImage;
+}
+
+// Convierte imagen a ArrayBuffer
 async function getImageBinary(dataUrl) {
-  const blob = await fetch(dataUrl).then(r => r.blob());
+  const response = await fetch(dataUrl);
+  const blob = await response.blob();
   return await blob.arrayBuffer();
 }
 
-function truncateText(text, maxLength) {
-  return text.substring(0, maxLength).trim();
-}
-
-function validateForm() {
-  // ... (igual que en la versión anterior)
-}
-
-function updatePreview() {
-  // ... (igual que en la versión anterior)
-}
-
+// Maneja errores NFC
 function handleNfcError(error) {
-  // ... (igual que en la versión anterior)
+  console.error("Error NFC:", error);
+  
+  let message = 'Error al grabar: ';
+  if (error.message.includes('IO error')) {
+    message = '🔌 Error de comunicación con el tag NFC. Prueba:';
+    message += '\n1. Usar otro tag NFC';
+    message += '\n2. Reiniciar el teléfono';
+    message += '\n3. Menos interferencias';
+  } else if (error.message.includes('large')) {
+    message = '📏 La imagen es demasiado grande para el tag NFC';
+  } else {
+    message += error.message;
+  }
+  
+  showStatus(`❌ ${message}`, 'error');
 }
 
+// Deshabilita/habilita la UI
 function disableUI(disabled) {
-  // ... (igual que en la versión anterior)
+  document.getElementById('generateBtn').disabled = disabled;
+  document.getElementById('writeNfcBtn').disabled = disabled;
 }
 
+// Muestra mensajes de estado
 function showStatus(message, type) {
-  // ... (igual que en la versión anterior)
+  const statusElement = document.getElementById('nfcStatus');
+  statusElement.textContent = message;
+  statusElement.className = `status-message status-${type}`;
 }
