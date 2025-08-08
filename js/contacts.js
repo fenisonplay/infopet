@@ -1,4 +1,3 @@
-// Manejo de contactos adicionales
 document.addEventListener('DOMContentLoaded', () => {
     const maxContacts = 5;
     let contactCount = 1;
@@ -34,7 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('additionalContacts').appendChild(contactEntry);
         contactCount++;
 
-        // Agregar evento al nuevo botón de eliminar
+        // Evento para eliminar contacto
         contactEntry.querySelector('.remove-contact').addEventListener('click', () => {
             contactEntry.remove();
             contactCount--;
