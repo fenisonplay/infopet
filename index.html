@@ -3,42 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro de Mascota NFC</title>
+    <title>Registro de Mascota</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <div id="nfcStatus" style="
-    padding: 10px;
-    margin: 15px 0;
-    font-weight: bold;
-"></div>
-    <div id="nfcStatus" style="padding: 10px; margin-top: 20px; border: 1px solid #ccc;"></div>
     <div class="container">
-        <h1>Registra a tu mascota</h1>
+        <h1>Registro de Mascota NFC</h1>
         <form id="petForm">
+            <!-- Datos básicos -->
             <div class="form-group">
-                <label for="petName">Nombre de la mascota</label>
+                <label for="petName">Nombre de la mascota <span class="required">*</span></label>
                 <input type="text" id="petName" required>
             </div>
+
             <div class="form-group">
-                <label for="ownerPhone">Teléfono del dueño</label>
+                <label for="petBreed">Raza (opcional)</label>
+                <input type="text" id="petBreed">
+            </div>
+
+            <!-- Dueño principal -->
+            <div class="form-group">
+                <label for="ownerName">Nombre del dueño <span class="required">*</span></label>
+                <input type="text" id="ownerName" required>
+            </div>
+
+            <div class="form-group">
+                <label for="ownerPhone">Teléfono principal <span class="required">*</span></label>
                 <input type="tel" id="ownerPhone" required>
             </div>
-            <button type="button" onclick="saveToNfc()">Guardar en NFC</button>
+
+            <div class="form-group">
+                <label for="ownerPhone2">Teléfono secundario (opcional)</label>
+                <input type="tel" id="ownerPhone2">
+            </div>
+
+            <div class="form-group">
+                <label for="ownerAddress">Domicilio <span class="required">*</span></label>
+                <input type="text" id="ownerAddress" required>
+            </div>
+
+            <!-- Contactos adicionales (hasta 5) -->
+            <div id="additionalContacts">
+                <h3>Contactos adicionales <small>(Máximo 5)</small></h3>
+                <div class="contact-entry">
+                    <div class="form-group">
+                        <label>Nombre completo</label>
+                        <input type="text" class="contact-name">
+                    </div>
+                    <div class="form-group">
+                        <label>Teléfono</label>
+                        <input type="tel" class="contact-phone">
+                    </div>
+                    <div class="form-group">
+                        <label>Parentesco</label>
+                        <select class="contact-relation">
+                            <option value="familiar">Familiar</option>
+                            <option value="amigo">Amigo</option>
+                            <option value="otros">Otros</option>
+                        </select>
+                    </div>
+                    <button type="button" class="remove-contact">Eliminar</button>
+                </div>
+            </div>
+
+            <button type="button" id="addContact">➕ Añadir otro contacto</button>
+
+            <!-- NFC y enviar -->
+            <div class="nfc-section">
+                <button type="button" id="saveBtn">Guardar en NFC</button>
+                <div id="nfcStatus"></div>
+            </div>
         </form>
-        <div id="nfcStatus" class="status"></div>
     </div>
 
-    <!-- Scripts al final para mejor rendimiento -->
     <script src="js/nfc.js"></script>
-    <script>
-        // Verificación rápida de que el botón está conectado
-        console.log("Script cargado. Función saveToNfc disponible:", typeof saveToNfc === 'function');
-    </script>
+    <script src="js/contacts.js"></script>
 </body>
 </html>
-
-
-
-
-
