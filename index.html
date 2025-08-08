@@ -1,326 +1,34 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <link rel="stylesheet" href="css/style.css">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registro de Mascota NFC</title>
-    <style>
-        :root {
-            --primary: #4CAF50;
-            --secondary: #2196F3;
-            --dark: #333;
-            --light: #f9f9f9;
-            --error: #f44336;
-        }
-        
-        * {
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #f5f5f5;
-            color: var(--dark);
-            line-height: 1.6;
-        }
-        
-        .container {
-            max-width: 500px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        
-        .card {
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            padding: 25px;
-            margin-bottom: 30px;
-        }
-        
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        
-        .header img {
-            width: 80px;
-            height: 80px;
-            margin-bottom: 15px;
-        }
-        
-        .header h1 {
-            color: var(--primary);
-            margin: 0;
-            font-size: 24px;
-        }
-        
-        .header p {
-            color: #666;
-            margin-top: 5px;
-        }
-        
-        .form-group {
-            margin-bottom: 20px;
-        }
-        
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #555;
-        }
-        
-        input, textarea, select {
-            width: 100%;
-            padding: 12px 15px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border 0.3s;
-        }
-        
-        input:focus, textarea:focus, select:focus {
-            border-color: var(--secondary);
-            outline: none;
-        }
-        
-        textarea {
-            min-height: 100px;
-            resize: vertical;
-        }
-        
-        .btn {
-            background-color: var(--primary);
-            color: white;
-            border: none;
-            padding: 14px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: 600;
-            width: 100%;
-            transition: background 0.3s;
-        }
-        
-        .btn:hover {
-            background-color: #45a049;
-        }
-        
-        .nfc-section {
-            text-align: center;
-            margin-top: 30px;
-            padding: 20px;
-            background-color: #f0f8ff;
-            border-radius: 10px;
-            border: 2px dashed #bbdefb;
-        }
-        
-        .nfc-icon {
-            font-size: 48px;
-            margin-bottom: 15px;
-            color: var(--secondary);
-        }
-        
-        .status {
-            padding: 10px;
-            border-radius: 5px;
-            margin-top: 15px;
-            text-align: center;
-            display: none;
-        }
-        
-        .success {
-            background-color: #e8f5e9;
-            color: #2e7d32;
-            display: block;
-        }
-        
-        .error {
-            background-color: #ffebee;
-            color: var(--error);
-            display: block;
-        }
-        
-        .pet-photo {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            object-fit: cover;
-            margin: 0 auto 20px;
-            display: block;
-            border: 3px solid var(--primary);
-        }
-        
-        .photo-upload {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        
-        .hidden {
-            display: none;
-        }
-        
-        @media (max-width: 480px) {
-            .container {
-                padding: 15px;
-            }
-            
-            .card {
-                padding: 20px;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <div class="container">
-        <div class="card">
-            <div class="header">
-                <img src="https://cdn-icons-png.flaticon.com/512/616/616408.png" alt="Icono de perro">
-                <h1>Registra a tu Mascota</h1>
-                <p>Completa los datos y guárdalos en el colgante NFC</p>
+        <h1>Registra a tu mascota</h1>
+        <form id="petForm">
+            <div class="form-group">
+                <label for="petName">Nombre de la mascota</label>
+                <input type="text" id="petName" required>
             </div>
-            
-            <div class="photo-upload">
-                <img id="petPhotoPreview" src="https://cdn-icons-png.flaticon.com/512/194/194279.png" class="pet-photo" alt="Foto de mascota">
-                <input type="file" id="petPhoto" accept="image/*" class="hidden">
-                <button type="button" onclick="document.getElementById('petPhoto').click()" class="btn" style="background-color: var(--secondary); max-width: 200px; margin: 0 auto;">
-                    Subir Foto
-                </button>
+            <div class="form-group">
+                <label for="ownerPhone">Teléfono del dueño</label>
+                <input type="tel" id="ownerPhone" required>
             </div>
-            
-            <form id="petForm">
-                <div class="form-group">
-                    <label for="petName">Nombre de tu mascota</label>
-                    <input type="text" id="petName" required placeholder="Ej: Max">
-                </div>
-                
-                <div class="form-group">
-                    <label for="ownerName">Tu nombre</label>
-                    <input type="text" id="ownerName" required placeholder="Ej: Juan Pérez">
-                </div>
-                
-                <div class="form-group">
-                    <label for="phone">Teléfono de contacto</label>
-                    <input type="tel" id="phone" required placeholder="Ej: +34 612 345 678">
-                </div>
-                
-                <div class="form-group">
-                    <label for="address">Dirección (opcional)</label>
-                    <input type="text" id="address" placeholder="Ej: Calle Principal 123">
-                </div>
-                
-                <div class="form-group">
-                    <label for="medicalInfo">Información médica importante</label>
-                    <textarea id="medicalInfo" placeholder="Alergias, medicamentos, condiciones especiales..."></textarea>
-                </div>
-                
-                
-                <div class="nfc-section">
-                    <div class="nfc-icon">📱</div>
-                    <h3>Guardar en Colgante NFC</h3>
-                    <p>Acerca el colgante a la parte trasera de tu teléfono cuando se indique</p>
-                    <button type="button" id="saveToNfcBtn" class="btn">Guardar Datos en NFC</button>
-                    <div id="nfcStatus" class="status"></div>
-                </div>
-            </form>
-        </div>
+            <button type="button" onclick="saveToNfc()">Guardar en NFC</button>
+        </form>
+        <div id="nfcStatus" class="status"></div>
     </div>
 
-    <script>
-        // Mostrar vista previa de la foto
-        document.getElementById('petPhoto').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    document.getElementById('petPhotoPreview').src = event.target.result;
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-        
-        // Guardar datos en NFC
-        document.getElementById('saveToNfcBtn').addEventListener('click', async function() {
-            const statusDiv = document.getElementById('nfcStatus');
-            statusDiv.className = 'status';
-            
-            // Validar formulario
-            const petName = document.getElementById('petName').value;
-            const ownerName = document.getElementById('ownerName').value;
-            const phone = document.getElementById('phone').value;
-            
-            if (!petName || !ownerName || !phone) {
-                statusDiv.textContent = 'Por favor, completa los campos obligatorios';
-                statusDiv.classList.add('error');
-                return;
-            }
-            
-            // Crear objeto con los datos
-            const petData = {
-                name: petName,
-                owner: ownerName,
-                phone: phone,
-                address: document.getElementById('address').value,
-                medicalInfo: document.getElementById('medicalInfo').value,
-                reward: document.getElementById('reward').value,
-                photo: document.getElementById('petPhotoPreview').src
-            };
-            
-            // Verificar soporte NFC
-            if (!('NDEFReader' in window)) {
-                statusDiv.textContent = 'Tu navegador no soporta NFC o no está activado. Usa Chrome en Android.';
-                statusDiv.classList.add('error');
-                return;
-            }
-            
-            try {
-                statusDiv.textContent = 'Preparando escritura NFC...';
-                statusDiv.classList.add('success');
-                
-                const nfcWriter = new NDEFReader();
-                await nfcWriter.write({
-                    records: [
-                        { recordType: "text", data: JSON.stringify(petData) },
-                        { recordType: "url", data: window.location.href }
-                    ]
-                });
-                
-                statusDiv.textContent = '✅ Datos guardados correctamente en el colgante NFC';
-                statusDiv.classList.add('success');
-                
-            } catch (error) {
-                statusDiv.textContent = `❌ Error: ${error.message}`;
-                statusDiv.classList.add('error');
-                console.error("Error al escribir NFC:", error);
-            }
-        });
-        
-        // Cargar datos si ya existen (al recargar la página)
-        window.addEventListener('DOMContentLoaded', () => {
-            if (localStorage.getItem('petData')) {
-                const petData = JSON.parse(localStorage.getItem('petData'));
-                document.getElementById('petName').value = petData.name || '';
-                document.getElementById('ownerName').value = petData.owner || '';
-                document.getElementById('phone').value = petData.phone || '';
-                document.getElementById('address').value = petData.address || '';
-                document.getElementById('medicalInfo').value = petData.medicalInfo || '';
-                document.getElementById('reward').value = petData.reward || '';
-                if (petData.photo) {
-                    document.getElementById('petPhotoPreview').src = petData.photo;
-                }
-            }
-        });
-    </script>
+    <!-- Scripts al final para mejor rendimiento -->
     <script src="js/nfc.js"></script>
-<script>
-    // Asigna la función al botón
-    document.getElementById('saveBtn').addEventListener('click', saveToNfc);
-</script>
-    <button onclick="saveToNfc()">Guardar en NFC</button>
+    <script>
+        // Verificación rápida de que el botón está conectado
+        console.log("Script cargado. Función saveToNfc disponible:", typeof saveToNfc === 'function');
+    </script>
 </body>
 </html>
 
